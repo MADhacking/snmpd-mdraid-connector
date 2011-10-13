@@ -1,0 +1,84 @@
+#!/bin/bash
+
+function versioninfo
+{
+	VERSION="$Revision$"
+	VERSION="${VERSION%\ \$}"; VERSION="${VERSION#\:}"; VERSION="${VERSION##\ }"
+	VERSION="(CVS revision $VERSION)"
+	
+	NAME="$Name$"
+	NAME="${NAME%\ \$}"; NAME="${NAME#\:}"; NAME="${NAME##\ }"; NAME="${NAME##release-}"; NAME="${NAME//-/.}"
+	[[ -n $NAME ]] && NAME="Version $NAME "
+
+	echo ${CMDNAME}
+	echo ${NAME}${VERSION}
+
+	echo -e "\nCopyright (C) 2010 Hacking Networked Solutions"
+	echo "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>."
+	echo "This is free software: you are free to change and redistribute it."
+	echo "There is NO WARRANTY, to the extent permitted by law."
+}
+
+function helpscreen
+{
+	echo "Usage: ${CMDNAME} [OPTION]..."
+	echo "Maintaines SNMPD cache files of MD RAID details for configured devices."
+	echo
+	echo "      --help                     display this help and exit"
+    echo "      --version                  output version information and exit"
+}
+
+function error_exit
+{
+	echo "Error: $1" >&2
+	exit $2
+}
+
+# Init local vars
+CMDNAME=$(basename ${0})
+CONFIG="/etc/snmpd-mdraid-connector"
+
+# Read the config file if we can
+[[ -r $CONFIG ]] && source $CONFIG
+
+# Process command line switches
+while (( $# > 0 ))
+do
+	case $1 in
+		--version)
+			versioninfo
+			exit
+		;;	
+		*)
+			helpscreen
+			shift 1
+			exit
+		;;
+	esac
+done
+
+# If we couldn't open the config file then complain and exit.
+[[ ! -r $CONFIG ]] && error_exit "Unable to open configuration file [$CONFIG]" 1
+
+# Check for sensible configuration values.
+[[ -z ${DEVICES} ]] && error_exit "No DEVICES defined in ${CONFIG}" 2
+[[ -z ${CACHEDIR} ]] && error_exit "No CACHEDIR defined in ${CONFIG}" 3
+[[ -z ${MDADMCMD} ]] && error_exit "No MDADMCMD defined in ${CONFIG}" 4
+
+# Check that the cache direcroty exists and is writable
+[[ ! -d ${CACHEDIR} ]] && error_exit "Cache direcroty [${CACHEDIR}] does not exist" 5
+[[ ! -w ${CACHEDIR} ]] && error_exit "Cache direcroty [${CACHEDIR}] is not writable" 6
+
+# Rebuild the cache for all devices.
+echo -n "Rebuilding cache files..."
+for DEVICE in ${DEVICES[@]}; do
+	DEVFNAME=${DEVICE##\/}	 
+	DEVFNAME=${CACHEDIR}/${DEVFNAME//\//_}_mdinfo
+	TDEVFNAME=${DEVFNAME}.tmp
+
+	${MDADMCMD} --detail ${DEVICE} > ${TDEVFNAME}
+	mv ${TDEVFNAME} ${DEVFNAME}
+done
+echo "done."
+
+	

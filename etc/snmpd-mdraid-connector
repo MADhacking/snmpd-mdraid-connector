@@ -1,0 +1,14 @@
+# List of raid devices to monitor
+# DEVICES=(/dev/md0 /dev/md1 /dev/md2 /dev/md3)
+
+# Path to cache directory
+CACHEDIR=/var/cache/snmp
+
+# Command to run mdadm
+MDADMCMD="/sbin/mdadm"
+
+# Command to run snmptranslate
+SNMP_TRANSLATE="/usr/bin/snmptranslate"
+
+# Define debug to log lots
+# DEBUG="true"
