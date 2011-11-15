@@ -1,8 +1,8 @@
 #!/bin/bash -u
 
 # Include snmpd-connector-lib.sh or die.
-[[ ! -r /usr/lib/snmpd-connector-lib.sh ]] && echo "Unable to find /usr/lib/snmpd-connector-lib.sh" && exit 1
-source /usr/lib/snmpd-connector-lib.sh
+[[ ! -r ${SNMPD_CONNECTOR_LIB:=/usr/lib/snmpd-connector-lib.sh} ]] && echo "Unable to find ${SNMPD_CONNECTOR_LIB}" && exit 1
+source ${SNMPD_CONNECTOR_LIB}
 
 # Helper function to get the device path from the devices array using a 1 based index
 #
@@ -148,9 +148,6 @@ function send_device_has_spares
 
 # Function to send array info (gauge) - called: send_device_info_gauge OID DEVICE "Info String"
 #
-#	$1 - The OID to send before this data
-#	$2 - The DEVICE to send data for
-#	$3 - The STRING to search for
 #	@in_param	$1 - The STRING to search for
 #	@in_param	$2 - The OID to send before this data
 #	@in_param	$3 - The index value
@@ -165,51 +162,49 @@ function send_device_info_gauge
 
 # Function to get the next index value
 #
-#	@in_param	$2 - The base OID this is a request for
-#	@in_param	$+ - An array containing the request elements
+#	@in_param	$1 - The (optional) starting index value
+#	@echo		   - The new index or nothing if out of range
 #
 function get_next_index
 {
-	local RETVAL
-	
 	debug_function_enter "get_next_index" ${@}
 	
 	# If we still have more than one element in the request array then something
 	# is wrong so log an error and return 0.
-	if (( $# > 2 )); then
-		error_echo "get_next_index: called with $(( $# - 1 )) request array elements!"
-		debug_function_return 0
-		return 0
-	fi
-
-	# If we passed an index...
 	if (( $# > 1 )); then
+		error_echo "get_next_index: called with $# request array elements!"
+		debug_function_return
+		return
+	fi
+	
+	# If we were passed a starting index...
+	if (( $# > 0 )); then
 		# If the passed index is less than the number of devices then return it +1,
 		# otherwise return 0 to indicate that the index would be out of range. 
-		if (( ${2} < ${#DEVICES[@]} )); then
-			RETVAL=$(( ${2} + 1 ))
+		if (( ${1} < ${#DEVICES[@]} )); then
+			RETVAL=$(( ${1} + 1 ))
 			debug_echo "next index is in range, returning ${RETVAL}"
-			debug_function_return ${RETVAL}
-			return ${RETVAL}
+			echo "${RETVAL}"
+			debug_function_return
+			return
 		else
 			debug_echo "next index would be out of range, returning zero"
-			debug_function_return 0
-			return 0
+			debug_function_return
+			return
 		fi 
 	fi	
 	
 	# If we got this far then we were not passed an index so return the first
 	# available index.
 	debug_echo "no index supplied, returning first index"
-	debug_function_return 1
-	return 1
+	echo "1"
+	debug_function_return
+	return
 }
 
 # Init local vars
 CMDNAME="$(basename ${0})"
 CONFIG="/etc/snmpd-mdraid-connector"
-DEBUG=""
-LOGGING=""
 DEVICES=""
 CACHEDIR=""
 SNMP_TRANSLATE=""
@@ -227,31 +222,27 @@ SNMP_TRANSLATE=""
 # Configure base address
 BASE_MIB="MD-RAID-MIB::mdRaid"
 
-# Declare the root table
+# Declare the tables
 RTABLE[2]="#ETABLE"
-
-# Declare the E[ntry]TABLE
-ETABLE[1]="#FTABLE"
-
-# Declare the function table.
-FTABLE[0]="get_next_index"								# Internal function to get next index
-FTABLE[1]="send_index"									# It is an index request.
-FTABLE[2]="send_device_path" 							# It is for the mapped device path.
-FTABLE[3]="send_device_info_str 'Version'" 				# It is for the raid version.
-FTABLE[4]="send_device_info_str 'UUID'" 				# It is for the raid UUID.
-FTABLE[5]="send_device_info_str 'Raid Level'"			# It is for the raid level.
-FTABLE[6]="send_device_info_str 'Layout'" 				# It is for the raid layout.
-FTABLE[7]="send_device_info_str 'Chunk Size'"			# It is for the raid chunk size.
-FTABLE[8]="send_device_info_str 'Array Size'" 			# It is for the raid array size.
-FTABLE[9]="send_device_info_str 'Used Dev Size'"		# It is for the raid used device size.
-FTABLE[10]="send_device_health"							# It is for the overall array health state.
-FTABLE[11]="send_device_has_failed"						# Boolean indicating failed components.
-FTABLE[12]="send_device_has_spares"						# Boolean indicating available spares.
-FTABLE[13]="send_device_info_gauge 'Total Devices'"		# It is for the total number of devices in the array.
-FTABLE[14]="send_device_info_gauge 'Active Devices'"	# It is for the number of active devices in the array.
-FTABLE[15]="send_device_info_gauge 'Working Devices'"	# It is for the number of working devices in the array.
-FTABLE[16]="send_device_info_gauge 'Failed Devices'"	# It is for the number of failed devices in the array.
-FTABLE[17]="send_device_info_gauge 'Spare Devices'"		# It is for the number of spare devices in the array.
+	ETABLE[1]="#FTABLE"
+		FTABLE_INDEX="get_next_index"							# Internal function to get next index
+		FTABLE[1]="send_index"									# It is an index request.
+		FTABLE[2]="send_device_path" 							# It is for the mapped device path.
+		FTABLE[3]="send_device_info_str 'Version'" 				# It is for the raid version.
+		FTABLE[4]="send_device_info_str 'UUID'" 				# It is for the raid UUID.
+		FTABLE[5]="send_device_info_str 'Raid Level'"			# It is for the raid level.
+		FTABLE[6]="send_device_info_str 'Layout'" 				# It is for the raid layout.
+		FTABLE[7]="send_device_info_str 'Chunk Size'"			# It is for the raid chunk size.
+		FTABLE[8]="send_device_info_str 'Array Size'" 			# It is for the raid array size.
+		FTABLE[9]="send_device_info_str 'Used Dev Size'"		# It is for the raid used device size.
+		FTABLE[10]="send_device_health"							# It is for the overall array health state.
+		FTABLE[11]="send_device_has_failed"						# Boolean indicating failed components.
+		FTABLE[12]="send_device_has_spares"						# Boolean indicating available spares.
+		FTABLE[13]="send_device_info_gauge 'Total Devices'"		# It is for the total number of devices in the array.
+		FTABLE[14]="send_device_info_gauge 'Active Devices'"	# It is for the number of active devices in the array.
+		FTABLE[15]="send_device_info_gauge 'Working Devices'"	# It is for the number of working devices in the array.
+		FTABLE[16]="send_device_info_gauge 'Failed Devices'"	# It is for the number of failed devices in the array.
+		FTABLE[17]="send_device_info_gauge 'Spare Devices'"		# It is for the number of spare devices in the array.
 
 # Start the loop
 the_loop
