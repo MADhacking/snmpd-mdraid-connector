@@ -117,7 +117,8 @@ function send_device_health
 	local VALUE
 	
 	get_field ${2} "State" VALUE
-	[[ $VALUE == "active" ]] && send_boolean ${1} "T" || send_boolean ${1} "F"
+	[[ ${VALUE} == "active" || ${VALUE} == "active-idle" || ${VALUE} == "clean" ]] \
+		&& send_boolean ${1} "T" || send_boolean ${1} "F"
 }
 
 # Function to boolean indicating array has failed components - called: send_device_has_failed OID DEVICE
