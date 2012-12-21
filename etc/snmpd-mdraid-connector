@@ -1,5 +1,5 @@
-# List of raid devices to monitor
-# DEVICES=(/dev/md0 /dev/md1 /dev/md2 /dev/md3)
+# List (or glob) of raid devices to monitor
+DEVICES=(/dev/md*[0-9])
 
 # Path to cache directory
 CACHEDIR=/var/cache/snmp
