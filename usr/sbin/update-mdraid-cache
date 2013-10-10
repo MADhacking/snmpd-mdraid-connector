@@ -22,7 +22,7 @@ function versioninfo
 function helpscreen
 {
 	echo "Usage: ${CMDNAME} [OPTION]..."
-	echo "Maintaines SNMPD cache files of MD RAID details for configured devices."
+	echo "Maintains SNMPD cache files of MD RAID details for configured devices."
 	echo
 	echo "      --help                     display this help and exit"
     echo "      --version                  output version information and exit"
@@ -66,7 +66,9 @@ done
 [[ -z ${MDADMCMD} ]] && error_exit "No MDADMCMD defined in ${CONFIG}" 4
 
 # Check that the cache directory exists and is writable
-[[ ! -d ${CACHEDIR} ]] && error_exit "Cache directory [${CACHEDIR}] does not exist" 5
+if [[ ! -d ${CACHEDIR} ]]; then
+	mkdir -p ${CACHEDIR} || error_exit "Cache directory [$CACHEDIR] does not exist and could not be created" 5
+fi
 [[ ! -w ${CACHEDIR} ]] && error_exit "Cache directory [${CACHEDIR}] is not writable" 6
 
 # Rebuild the cache for all devices.

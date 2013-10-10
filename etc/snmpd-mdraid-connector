@@ -2,7 +2,7 @@
 DEVICES=(/dev/md*[0-9])
 
 # Path to cache directory
-CACHEDIR=/var/cache/snmp
+CACHEDIR=/tmp/snmp-cache/mdadm
 
 # Command to run mdadm
 MDADMCMD="/sbin/mdadm"
