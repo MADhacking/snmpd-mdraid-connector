@@ -71,6 +71,24 @@ if [[ ! -d ${CACHEDIR} ]]; then
 fi
 [[ ! -w ${CACHEDIR} ]] && error_exit "Cache directory [${CACHEDIR}] is not writable" 6
 
+# Check that the devices list exists...
+if [[ -f ${CACHEDIR}/devices ]]; then
+	# Compare the stored list of devices to the current list.
+	[[ "$(cat ${CACHEDIR}/devices)" = ${DEVICES[@]} ]] || INFO_REBUILD="YES"
+else
+	INFO_REBUILD="YES"
+fi
+
+# If the INFO_REBUILD flag is set then completely clean the cache.
+if [[ ! -z ${INFO_REBUILD} ]]; then
+	echo -n "Cleaning cache files..."
+	rm ${CACHEDIR}/* &> /dev/null 
+	echo "done."
+	echo -n "Storing device list..."
+	echo ${DEVICES[@]} > ${CACHEDIR}/devices
+	echo "done."
+fi
+
 # Rebuild the cache for all devices.
 echo -n "Rebuilding cache files..."
 for DEVICE in ${DEVICES[@]}; do
@@ -83,4 +101,9 @@ for DEVICE in ${DEVICES[@]}; do
 done
 echo "done."
 
-	
+# If the INFO_REBUILD flag is set kill any connector processes.
+if [[ ! -z ${INFO_REBUILD} ]]; then
+	echo -n "Killing any running connectors..."
+	killall snmpd-mdraid-connector
+	echo "done."
+fi
