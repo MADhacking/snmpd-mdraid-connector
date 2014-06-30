@@ -117,7 +117,9 @@ function send_device_health
 	local VALUE
 	
 	get_field ${2} "State" VALUE
-	[[ "${VALUE}" == "active" || "${VALUE}" == "active-idle" || "${VALUE}" == "clean" || "${VALUE}" == "clean," ]] \
+	VALUE="${VALUE%,*}"
+	
+	[[ "${VALUE}" == "active" || "${VALUE}" == "active-idle" || "${VALUE}" == "clean" ]] \
 		&& send_boolean ${1} "T" || send_boolean ${1} "F"
 }
 
