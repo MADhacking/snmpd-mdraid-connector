@@ -133,7 +133,7 @@ function send_device_has_failed
 	local VALUE
 
 	get_field ${2} "Failed Devices" VALUE
-	(( ${VALUE} > 0 )) && send_boolean ${1} "T" || send_boolean ${1} "F"
+	[[ "${VALUE}" == [1-9]* ]] && send_boolean ${1} "T" || send_boolean ${1} "F"
 }
 
 # Function to boolean indicating array has available spares - called: send_device_has_spares OID DEVICE
@@ -146,7 +146,7 @@ function send_device_has_spares
 	local VALUE
 
 	get_field ${2} "Spare Devices" VALUE
-	(( ${VALUE} > 0 )) && send_boolean ${1} "T" || send_boolean ${1} "F"
+	[[ "${VALUE}" == [1-9]* ]] && send_boolean ${1} "T" || send_boolean ${1} "F"
 }
 
 # Function to send array info (gauge) - called: send_device_info_gauge OID DEVICE "Info String"
