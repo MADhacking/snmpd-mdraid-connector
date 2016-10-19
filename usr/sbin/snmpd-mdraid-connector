@@ -61,6 +61,30 @@ function get_field
 	eval $3="N/A" 
 }
 
+# Helper function to get the string value of the rest of the line
+#
+#	@in_param	$1 - The 1 based index of the device
+#	@in_param	$2 - The search string
+#	@out_param	$3 - The string we found, if any.
+#
+function get_line
+{
+	local DFNAME VALUES L
+
+	get_device_filename ${1} DFNAME
+
+	# Try to find the search string and get its line
+	VALUE=($(grep "${2}[[:space:]]*:" < ${DFNAME} | head -1))
+
+	if [[ "$VALUE" =~ "${2}[[:space:]]*:[[:space::]*(.*)" ]]; then
+		eval $3=${BASH_REMATCH[1]}
+		return
+	fi
+
+	# If we got this far then there was no matching value
+	eval $3="N/A"
+}
+
 # Function to send the index value
 #
 #	@in_param	$1 - The OID to send before this data
@@ -116,8 +140,13 @@ function send_device_health
 {
 	local VALUE
 	
-	get_field ${2} "State" VALUE
-	VALUE="${VALUE%,*}"
+	get_line ${2} "State" VALUE    					# e.g. "clean" or "clean, degraded"
+	if [[ "${VALUE}" =~ ".*degraded.*" ]]; then
+		send_boolean ${1} "F"
+		return
+	fi
+
+	VALUE="${VALUE%,*}"   							# e.g. "active, checking"
 	
 	[[ "${VALUE}" == "active" || "${VALUE}" == "active-idle" || "${VALUE}" == "clean" ]] \
 		&& send_boolean ${1} "T" || send_boolean ${1} "F"
@@ -246,6 +275,7 @@ RTABLE[2]="#ETABLE"
 		FTABLE[15]="send_device_info_gauge 'Working Devices'"	# It is for the number of working devices in the array.
 		FTABLE[16]="send_device_info_gauge 'Failed Devices'"	# It is for the number of failed devices in the array.
 		FTABLE[17]="send_device_info_gauge 'Spare Devices'"		# It is for the number of spare devices in the array.
+		FTABLE[18]="send_device_info_gauge 'RAID Devices'"		# It is for the number of RAID devices in the array.
 
 # Start the loop
 the_loop
