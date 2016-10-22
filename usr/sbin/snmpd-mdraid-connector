@@ -46,7 +46,7 @@ function get_field
 	get_device_filename ${1} DFNAME
 
 	# Try to find the search string and get its line into an array.
-	VALUES=($(grep "${2}" < ${DFNAME}))
+	VALUES=($(grep --ignore-case "${2}" < ${DFNAME}))
 	
 	# Loop through the results looking for a ":", the value we want is next.
 	for (( L=0; L<${#VALUES[@]}; L++ ))
@@ -74,7 +74,7 @@ function get_line
 	get_device_filename ${1} DFNAME
 
 	# Try to find the search string and get its line
-	VALUE=($(grep "${2}[[:space:]]*:" < ${DFNAME} | head -1))
+	VALUE=($(grep --ignore-case "${2}[[:space:]]*:" < ${DFNAME} | head -1))
 
 	if [[ "$VALUE" =~ "${2}[[:space:]]*:[[:space::]*(.*)" ]]; then
 		eval $3=${BASH_REMATCH[1]}
