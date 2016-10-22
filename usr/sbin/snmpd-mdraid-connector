@@ -74,9 +74,9 @@ function get_line
 	get_device_filename ${1} DFNAME
 
 	# Try to find the search string and get its line
-	VALUE=($(grep --ignore-case "${2}[[:space:]]*:" < ${DFNAME} | head -1))
+	VALUE=$(grep --ignore-case "${2}[[:space:]]*:" < ${DFNAME} | head -1)
 
-	if [[ "$VALUE" =~ "${2}[[:space:]]*:[[:space::]*(.*)" ]]; then
+	if [[ $VALUE =~ ${2}[[:space:]]*:[[:space:]]*(.*) ]]; then
 		eval $3=${BASH_REMATCH[1]}
 		return
 	fi
