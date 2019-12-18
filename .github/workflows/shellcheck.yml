@@ -1,0 +1,17 @@
+name: Shellcheck
+
+on:
+  push:
+    paths-ignore:
+      - 'README.md'
+      - 'LICENSE'
+      - '.github/*'
+    tags-ignore:
+      - '*.*'
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - uses: hacking-actions/shellcheck@master
