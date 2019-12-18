@@ -6,8 +6,8 @@ on:
       - 'README.md'
       - 'LICENSE'
       - '.github/*'
-    tags-ignore:
-      - '*.*'
+#    tags-ignore:
+#      - '*.*'
 
 jobs:
   tests:
