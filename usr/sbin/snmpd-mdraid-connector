@@ -1,7 +1,10 @@
 #!/bin/bash -u
+# shellcheck disable=SC2034,SC2140
 
 # Include snmpd-connector-lib.sh or die.
-[[ ! -r ${SNMPD_CONNECTOR_LIB:=/usr/lib/snmpd-connector-lib.sh} ]] && echo "Unable to find ${SNMPD_CONNECTOR_LIB}" && exit 1
+[[ ! -r ${SNMPD_CONNECTOR_LIB:=/usr/lib/snmpd-connector-lib.sh} ]] && \
+    echo "Unable to find ${SNMPD_CONNECTOR_LIB}" && exit 1
+# shellcheck disable=SC1090
 source ${SNMPD_CONNECTOR_LIB}
 
 # Helper function to get the device path from the devices array using a 1 based index
@@ -12,7 +15,7 @@ source ${SNMPD_CONNECTOR_LIB}
 function get_device_path
 {
 	local AINDEX=$((${1} - 1))
-	eval $2=${DEVICES[${AINDEX}]}	
+	eval "$2"="${DEVICES[${AINDEX}]}"
 }
 
 # Helper function to make the filename for a device.
@@ -25,12 +28,12 @@ function get_device_filename
 	local DEVPATH DEVFILE
 	
 	# Make the device info filename
-	get_device_path ${1} DEVPATH
+	get_device_path "${1}" DEVPATH
 	
 	DEVFILE=${DEVPATH##\/}
 	DEVFILE=${CACHEDIR}/${DEVFILE//\//_}_mdinfo
 	
-	eval $2=${DEVFILE}
+	eval "$2"="${DEVFILE}"
 }
 
 # Helper function to get the string value of a field
@@ -43,22 +46,23 @@ function get_field
 {
 	local DFNAME VALUES L
 	
-	get_device_filename ${1} DFNAME
+	get_device_filename "${1}" DFNAME
 
 	# Try to find the search string and get its line into an array.
-	VALUES=($(grep --ignore-case "${2}" < ${DFNAME}))
+	# shellcheck disable=SC2207
+	VALUES=($(grep --ignore-case "${2}" < "${DFNAME}"))
 	
 	# Loop through the results looking for a ":", the value we want is next.
 	for (( L=0; L<${#VALUES[@]}; L++ ))
 	do
 		if [[ ${VALUES[L]} = ":" ]]; then
-			eval $3=${VALUES[L+1]}
+			eval "$3"="${VALUES[L+1]}"
 			return
 		fi
 	done 
 	
 	# If we got this far then there was no matching value, or it was blank.
-	eval $3="N/A" 
+	eval "$3"="N/A" 
 }
 
 # Helper function to get the string value of the rest of the line
@@ -71,18 +75,19 @@ function get_line
 {
 	local DFNAME VALUES L
 
-	get_device_filename ${1} DFNAME
+	get_device_filename "${1}" DFNAME
 
 	# Try to find the search string and get its line
-	VALUE=$(grep --ignore-case "${2}[[:space:]]*:" < ${DFNAME} | head -1)
+    # shellcheck disable=SC2207
+	VALUE=$(grep --ignore-case "${2}[[:space:]]*:" < "${DFNAME}" | head -1)
 
 	if [[ $VALUE =~ ${2}[[:space:]]*:[[:space:]]*(.*) ]]; then
-		eval $3=\"${BASH_REMATCH[1]}\"
+		eval "$3"=\""${BASH_REMATCH[1]}"\"
 		return
 	fi
 
 	# If we got this far then there was no matching value
-	eval $3="N/A"
+	eval "$3"="N/A"
 }
 
 # Function to send the index value
@@ -96,13 +101,13 @@ function send_index
 	if (( $# > 1 )); then
 		if (( ${2} <= ${#DEVICES[@]} )); then
 			# Send the OID and the index number.
-			send_integer ${1} ${2}
+			send_integer "${1}" "${2}"
 			return
 		fi
 	fi
 
 	# Send the OID and NONE.
-	send_none ${1}
+	send_none "${1}"
 }
 
 # Function to send the device path
@@ -113,8 +118,8 @@ function send_index
 function send_device_path
 {
 	local DEVPATH 
-	get_device_path ${2} DEVPATH
-	send_string ${1} ${DEVPATH}
+	get_device_path "${2}" DEVPATH
+	send_string "${1}" "${DEVPATH}"
 }
 
 # Function to send array info (string) - called: send_device_info_str OID DEVICE "Info String"
@@ -127,8 +132,8 @@ function send_device_info_str
 {
 	local VALUE
 	
-	get_field ${3} "${1}" VALUE
-	send_string ${2} ${VALUE}
+	get_field "${3}" "${1}" VALUE
+	send_string "${2}" "${VALUE}"
 }
 
 # Function to send array health (string) - called: send_device_health OID DEVICE
@@ -140,17 +145,20 @@ function send_device_health
 {
 	local VALUE
 	
-	get_line ${2} "State" VALUE    					# e.g. "clean " or "clean, degraded "
+	get_line "${2}" "State" VALUE    					# e.g. "clean " or "clean, degraded "
 	VALUE="${VALUE%"${VALUE##*[![:space:]]}"}"
 	if [[ "${VALUE}" =~ .*degraded.* ]]; then
-		send_boolean ${1} "F"
+		send_boolean "${1}" "F"
 		return
 	fi
 
 	VALUE="${VALUE%,*}"   							# e.g. "active, checking"
 	
-	[[ "${VALUE}" == "active" || "${VALUE}" == "active-idle" || "${VALUE}" == "clean" ]] \
-		&& send_boolean ${1} "T" || send_boolean ${1} "F"
+	if [[ "${VALUE}" == "active" || "${VALUE}" == "active-idle" || "${VALUE}" == "clean" ]]; then
+	    send_boolean "${1}" "T"
+	else
+	    send_boolean "${1}" "F"
+	fi
 }
 
 # Function to boolean indicating array has failed components - called: send_device_has_failed OID DEVICE
@@ -162,8 +170,12 @@ function send_device_has_failed
 {
 	local VALUE
 
-	get_field ${2} "Failed Devices" VALUE
-	[[ "${VALUE}" == [1-9]* ]] && send_boolean ${1} "T" || send_boolean ${1} "F"
+	get_field "${2}" "Failed Devices" VALUE
+	if [[ "${VALUE}" == [1-9]* ]]; then
+	    send_boolean "${1}" "T"
+	else
+	    send_boolean "${1}" "F"
+	fi
 }
 
 # Function to boolean indicating array has available spares - called: send_device_has_spares OID DEVICE
@@ -175,8 +187,12 @@ function send_device_has_spares
 {
 	local VALUE
 
-	get_field ${2} "Spare Devices" VALUE
-	[[ "${VALUE}" == [1-9]* ]] && send_boolean ${1} "T" || send_boolean ${1} "F"
+	get_field "${2}" "Spare Devices" VALUE
+	if [[ "${VALUE}" == [1-9]* ]]; then
+	    send_boolean "${1}" "T"
+	else
+	    send_boolean "${1}" "F"
+	fi
 }
 
 # Function to send array info (gauge) - called: send_device_info_gauge OID DEVICE "Info String"
@@ -189,8 +205,8 @@ function send_device_info_gauge
 {
 	local VALUE
 	
-	get_field ${3} "${1}" VALUE
-	send_gauge ${2} ${VALUE}
+	get_field "${3}" "${1}" VALUE
+	send_gauge "${2}" "${VALUE}"
 }
 
 # Function to get the next index value
@@ -200,13 +216,10 @@ function send_device_info_gauge
 #
 function get_next_index
 {
-	debug_function_enter "get_next_index" ${@}
-	
 	# If we still have more than one element in the request array then something
 	# is wrong so log an error and return 0.
 	if (( $# > 1 )); then
 		error_echo "get_next_index: called with $# request array elements!"
-		debug_function_return
 		return
 	fi
 	
@@ -218,11 +231,9 @@ function get_next_index
 			RETVAL=$(( ${1} + 1 ))
 			debug_echo "next index is in range, returning ${RETVAL}"
 			echo "${RETVAL}"
-			debug_function_return
 			return
 		else
 			debug_echo "next index would be out of range, returning zero"
-			debug_function_return
 			return
 		fi 
 	fi	
@@ -231,26 +242,27 @@ function get_next_index
 	# available index.
 	debug_echo "no index supplied, returning first index"
 	echo "1"
-	debug_function_return
 	return
 }
 
 # Init local vars
-CMDNAME="$(basename ${0})"
-CONFIG="/etc/snmpd-mdraid-connector"
+CMDNAME=$(basename "${0}")
+CONFIG="${CONFIG:-/etc/snmpd-mdraid-connector}"
 DEVICES=""
 CACHEDIR=""
-SNMP_TRANSLATE=""
+DEBUG=""
 
 # Read the config file if we can
-[[ -r "${CONFIG}" ]] && source ${CONFIG} || die "Unable to read configuration file [${CONFIG}]"
+# shellcheck disable=SC1090
+source "${CONFIG}" || die "Unable to read configuration file [${CONFIG}]"
 
 # Check for config values.
 [[ -z "${DEVICES}" ]] && die "No DEVICES configured in ${CONFIG}"
 [[ -z "${CACHEDIR}" ]] && die "No CACHEDIR configured in ${CONFIG}"
-[[ ! -d "${CACHEDIR}" ]] && die "Cache directory [${CACHEDIR}] is not a directory"
+if [[ ! -d "${CACHEDIR}" ]]; then
+     mkdir -p "${CACHEDIR}" || die "Cache directory [${CACHEDIR}] does not exist and could not be created"
+ fi
 [[ ! -r "${CACHEDIR}" ]] && die "Cache directory [${CACHEDIR}] is not readable by $(whoami)"
-[[ -z "${SNMP_TRANSLATE}" ]] && die "No SNMP_TRANSLATE command configured in ${CONFIG}"
 
 # Configure base address
 BASE_MIB="MD-RAID-MIB::mdRaid"

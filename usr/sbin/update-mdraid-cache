@@ -2,21 +2,13 @@
 
 function versioninfo
 {
-	VERSION="$Revision$"
-	VERSION="${VERSION%\ \$}"; VERSION="${VERSION#\:}"; VERSION="${VERSION##\ }"
-	VERSION="(CVS revision $VERSION)"
-	
-	NAME="$Name$"
-	NAME="${NAME%\ \$}"; NAME="${NAME#\:}"; NAME="${NAME##\ }"; NAME="${NAME##release-}"; NAME="${NAME//-/.}"
-	[[ -n $NAME ]] && NAME="Version $NAME "
+    echo "${CMDNAME}"
+    echo "Version 1.0.0"
 
-	echo ${CMDNAME}
-	echo ${NAME}${VERSION}
-
-	echo -e "\nCopyright (C) 2010 Hacking Networked Solutions"
-	echo "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>."
-	echo "This is free software: you are free to change and redistribute it."
-	echo "There is NO WARRANTY, to the extent permitted by law."
+    echo -e "\nCopyright (C) 2010-2019 Hacking Networked Solutions"
+    echo "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>."
+    echo "This is free software: you are free to change and redistribute it."
+    echo "There is NO WARRANTY, to the extent permitted by law."
 }
 
 function helpscreen
@@ -28,18 +20,21 @@ function helpscreen
     echo "      --version                  output version information and exit"
 }
 
-function error_exit
+function die
 {
-	echo "Error: $1" >&2
-	exit $2
+    echo "${1}" >&2
+    exit 1
 }
 
 # Init local vars
-CMDNAME=$(basename ${0})
-CONFIG="/etc/snmpd-mdraid-connector"
+CMDNAME=$(basename "${0}")
+CONFIG="${CONFIG:-/etc/snmpd-mdraid-connector}"
+MDADMCMD="${MDADMCMD:-$(command -v mdadm)}"
+DEVICES=""
 
 # Read the config file if we can
-[[ -r $CONFIG ]] && source $CONFIG
+# shellcheck disable=SC1090
+source "${CONFIG}" 2>/dev/null || die "Unable to read configuration file [${CONFIG}]"
 
 # Process command line switches
 while (( $# > 0 ))
@@ -58,51 +53,51 @@ do
 done
 
 # If we couldn't open the config file then complain and exit.
-[[ ! -r $CONFIG ]] && error_exit "Unable to open configuration file [$CONFIG]" 1
+[[ ! -r $CONFIG ]] && die "Unable to open configuration file [$CONFIG]"
 
 # Check for sensible configuration values.
-[[ -z ${DEVICES} ]] && error_exit "No DEVICES defined in ${CONFIG}" 2
-[[ -z ${CACHEDIR} ]] && error_exit "No CACHEDIR defined in ${CONFIG}" 3
-[[ -z ${MDADMCMD} ]] && error_exit "No MDADMCMD defined in ${CONFIG}" 4
+[[ -z ${DEVICES} ]] && die "No DEVICES defined in ${CONFIG}"
+[[ -z ${CACHEDIR} ]] && die "No CACHEDIR defined in ${CONFIG}"
+[[ -z ${MDADMCMD} ]] && die "Unable to locate mdadm (and MDADMCMD not defined in ${CONFIG})"
 
 # Check that the cache directory exists and is writable
-if [[ ! -d ${CACHEDIR} ]]; then
-	mkdir -p ${CACHEDIR} || error_exit "Cache directory [$CACHEDIR] does not exist and could not be created" 5
+if [[ ! -d "${CACHEDIR}" ]]; then
+	mkdir -p "${CACHEDIR}" || die "Cache directory [$CACHEDIR] does not exist and could not be created"
 fi
-[[ ! -w ${CACHEDIR} ]] && error_exit "Cache directory [${CACHEDIR}] is not writable" 6
+[[ ! -w "${CACHEDIR}" ]] && die "Cache directory [${CACHEDIR}] is not writable"
 
 # Check that the devices list exists...
-if [[ -f ${CACHEDIR}/devices ]]; then
+if [[ -f "${CACHEDIR}"/devices ]]; then
 	# Compare the stored list of devices to the current list.
-	[[ "$(cat ${CACHEDIR}/devices)" = ${DEVICES[@]} ]] || INFO_REBUILD="YES"
+	[[ "$(cat "${CACHEDIR}"/devices)" = "${DEVICES[*]}" ]] || INFO_REBUILD="YES"
 else
 	INFO_REBUILD="YES"
 fi
 
 # If the INFO_REBUILD flag is set then completely clean the cache.
-if [[ ! -z ${INFO_REBUILD} ]]; then
+if [[ -n "${INFO_REBUILD}" ]]; then
 	echo -n "Cleaning cache files..."
-	rm ${CACHEDIR}/* &> /dev/null 
+	rm "${CACHEDIR}"/* &> /dev/null 
 	echo "done."
 	echo -n "Storing device list..."
-	echo ${DEVICES[@]} > ${CACHEDIR}/devices
+	echo "${DEVICES[@]}" > "${CACHEDIR}"/devices
 	echo "done."
 fi
 
 # Rebuild the cache for all devices.
 echo -n "Rebuilding cache files..."
-for DEVICE in ${DEVICES[@]}; do
+for DEVICE in "${DEVICES[@]}"; do
 	DEVFNAME=${DEVICE##\/}	 
 	DEVFNAME=${CACHEDIR}/${DEVFNAME//\//_}_mdinfo
 	TDEVFNAME=${DEVFNAME}.tmp
 
-	${MDADMCMD} --detail ${DEVICE} > ${TDEVFNAME}
-	mv ${TDEVFNAME} ${DEVFNAME}
+	${MDADMCMD} --detail ${DEVICE} > "${TDEVFNAME}"
+	mv "${TDEVFNAME}" "${DEVFNAME}"
 done
 echo "done."
 
 # If the INFO_REBUILD flag is set kill any connector processes.
-if [[ ! -z ${INFO_REBUILD} ]]; then
+if [[ -n "${INFO_REBUILD}" ]]; then
 	echo -n "Killing any running connectors..."
 	killall snmpd-mdraid-connector
 	echo "done."
