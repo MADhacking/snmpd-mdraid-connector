@@ -7,8 +7,5 @@ CACHEDIR=/tmp/snmp-cache/mdadm
 # Command to run mdadm
 MDADMCMD="/sbin/mdadm"
 
-# Command to run snmptranslate
-SNMP_TRANSLATE="/usr/bin/snmptranslate"
-
 # Define debug to log lots
 # DEBUG="true"

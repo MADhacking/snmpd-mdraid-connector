@@ -1,0 +1,31 @@
+/dev/md2:
+           Version : 1.2
+     Creation Time : Mon Mar 11 18:16:50 2019
+        Raid Level : raid6
+        Array Size : 67043328 (63.94 GiB 68.65 GB)
+     Used Dev Size : 33521664 (31.97 GiB 34.33 GB)
+      Raid Devices : 4
+     Total Devices : 4
+       Persistence : Superblock is persistent
+
+       Update Time : Wed Dec 18 18:55:01 2019
+             State : clean, degraded
+    Active Devices : 4
+   Working Devices : 4
+    Failed Devices : 0
+     Spare Devices : 0
+
+            Layout : left-symmetric
+        Chunk Size : 64K
+
+Consistency Policy : resync
+
+              Name : host1:127  (local to host host1)
+              UUID : 4feed97f:09b6677d:35d413d8:d927d7a2
+            Events : 43077
+
+    Number   Major   Minor   RaidDevice State
+       0       8        3        0      active sync   /dev/sda3
+       1       8       19        1      active sync   /dev/sdb3
+       4       8       35        2      active sync   /dev/sdc3
+       5       8       51        3      active sync   /dev/sdd3

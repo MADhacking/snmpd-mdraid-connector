@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+case $1 in
+    "--detail")
+        case $2 in
+            "/dev/md1")
+                cat tests/sup/dev_md1_mdinfo
+            ;;
+            "/dev/md2")
+                cat tests/sup/dev_md2_mdinfo
+            ;;
+            *)
+                exit 1
+            ;;
+        esac
+    ;;
+    *)
+        exit 1
+    ;;
+esac
