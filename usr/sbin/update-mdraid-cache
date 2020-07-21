@@ -91,7 +91,7 @@ for DEVICE in "${DEVICES[@]}"; do
 	DEVFNAME=${CACHEDIR}/${DEVFNAME//\//_}_mdinfo
 	TDEVFNAME=${DEVFNAME}.tmp
 
-	${MDADMCMD} --detail ${DEVICE} > "${TDEVFNAME}"
+	${MDADMCMD} --detail "${DEVICE}" > "${TDEVFNAME}"
 	mv "${TDEVFNAME}" "${DEVFNAME}"
 done
 echo "done."
